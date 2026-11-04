@@ -292,6 +292,9 @@ func (w *NodeController) runCheckpoint(
 		if executor.StepOf(err) == executor.StepCommitCheckpoint {
 			failure.retryable = false
 		}
+		// Measured while the source is still suspended, so the tree the dump was
+		// sizing is the one still there to size.
+		failure, err = w.refineFullStaging(ctx, failure, err, containerPID)
 		// Recovery ends a source it cannot revive, so running it on a failure that
 		// never suspended one would kill a workload this capture never took.
 		suspended, needsRecovery := executor.SuspendedSourceOf(err)
@@ -408,7 +411,6 @@ func (w *NodeController) attemptCheckpoint(
 		StartedAt:            time.Now(),
 		CuInterposeRequested: cuInterposeRequested,
 		StoreID:              storeID,
-		// Read only once a dump has failed, so a capture that succeeds never reads it.
 		DumpRetriesRemaining: dumpRetriesRemaining,
 	}
 	// Success is success even past the deadline: executorCheckpoint returns nil only after it has
